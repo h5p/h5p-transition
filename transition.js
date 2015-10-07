@@ -4,8 +4,15 @@ var H5P = H5P || {};
  */
 H5P.Transition = (function ($) {
 
+  /**
+   * @class
+   * @namespace H5P
+   */
   Transition = {};
 
+  /**
+   * @private
+   */
   Transition.transitionEndEventNames = {
     'WebkitTransition': 'webkitTransitionEnd',
     'transition':       'transitionend',
@@ -14,11 +21,17 @@ H5P.Transition = (function ($) {
     'msTransition':     'MSTransitionEnd'
   };
 
+  /**
+   * @private
+   */
   Transition.cache = [];
 
   /**
    * Get the vendor property name for an event
    *
+   * @function H5P.Transition.getVendorPropertyName
+   * @static
+   * @private
    * @param  {string} prop Generic property name
    * @return {string}      Vendor specific property name
    */
@@ -58,6 +71,8 @@ H5P.Transition = (function ($) {
   /**
    * Get the name of the transition end event
    *
+   * @static
+   * @private
    * @return {string}  description
    */
   Transition.getTransitionEndEventName = function () {
@@ -67,6 +82,8 @@ H5P.Transition = (function ($) {
   /**
    * Helper function for listening on transition end events
    *
+   * @function H5P.Transition.onTransitionEnd
+   * @static
    * @param  {domElement} $element The element which is transitioned
    * @param  {function} callback The callback to be invoked when transition is finished
    * @param  {number} timeout  Timeout in milliseconds. Fallback if transition event is never fired
@@ -74,12 +91,14 @@ H5P.Transition = (function ($) {
   Transition.onTransitionEnd = function ($element, callback, timeout) {
     // Fallback on 1 second if transition event is not supported/triggered
     timeout = timeout || 1000;
+    Transition.transitionEndEventName = Transition.transitionEndEventName || Transition.getTransitionEndEventName();
     var callbackCalled = false;
 
     var doCallback = function () {
       if (callbackCalled) {
         return;
       }
+      $element.off(Transition.transitionEndEventName, callback);
       callbackCalled = true;
       clearTimeout(timer);
       callback();
@@ -89,11 +108,51 @@ H5P.Transition = (function ($) {
       doCallback();
     }, timeout);
 
-    $element.on(Transition.getTransitionEndEventName(), function () {
+    $element.on(Transition.transitionEndEventName, function () {
       doCallback();
     });
   };
 
+  /**
+   * Wait for a transition - when finished, invokes next in line
+   *
+   * @private
+   *
+   * @param {Object[]}    transitions             Array of transitions
+   * @param {H5P.jQuery}  transitions[].$element  Dom element transition is performed on
+   * @param {number=}     transitions[].timeout   Timeout fallback if transition end never is triggered
+   * @param {bool=}       transitions[].break     If true, sequence breaks after this transition
+   * @param {number}      index                   The index for current transition
+   */
+  var runSequence = function (transitions, index) {
+    if (index >= transitions.length) {
+      return;
+    }
+
+    var transition = transitions[index];
+    H5P.Transition.onTransitionEnd(transition.$element, function () {
+      if (transition.end) {
+        transition.end();
+      }
+      if (transition.break !== true) {
+        runSequence(transitions, index+1);
+      }
+    }, transition.timeout || undefined);
+  };
+
+  /**
+   * Run a sequence of transitions
+   *
+   * @function H5P.Transition.sequence
+   * @static
+   * @param {Object[]}    transitions             Array of transitions
+   * @param {H5P.jQuery}  transitions[].$element  Dom element transition is performed on
+   * @param {number=}     transitions[].timeout   Timeout fallback if transition end never is triggered
+   * @param {bool=}       transitions[].break     If true, sequence breaks after this transition
+   */
+  Transition.sequence = function (transitions) {
+    runSequence(transitions, 0);
+  };
 
   return Transition;
 })(H5P.jQuery);
