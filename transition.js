@@ -1,4 +1,4 @@
-var H5P = H5P || {};
+var H5P = window.H5P = window.H5P || {};
 /**
  * Transition contains helper function relevant for transitioning
  */
@@ -8,7 +8,7 @@ H5P.Transition = (function ($) {
    * @class
    * @namespace H5P
    */
-  Transition = {};
+  var Transition = {};
 
   /**
    * @private
